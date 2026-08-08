@@ -292,8 +292,25 @@ int main()
     vector2D vel_zero(0, 0);
 
 
-    double total_time = 70.0;
+    double total_time = 40.0;
 
+//-----strouhal number calcualtion things------------------
+
+    double St = 0.0;
+
+    int neg_time = 0; //this is for the calculation of vortex shedding freeqency for the calculation of..
+    //..Strouhal Number (St) which is St = (f*D)/u, where f is the vortex shedding freequecny
+
+    int numb_of_waves = 0; //this is for finding the average value of shedding frequency
+
+    double perv_lift; //this i am using for the calculation of number of waves
+
+    double frequency;
+
+    int q; //this q will be used so that my code will be able to ignore if the initial small..
+    //..past of lift is negative!
+
+    //-----end of strouhal number calculation things!----------------
 
     double node_length = L_x / nodes_x;
     double time_step = (U_star * node_length) / u_in;
@@ -429,6 +446,7 @@ int main()
 
     else
     {
+        cout << "Velocity or density input files not found so initializing entire domain to inlet velocity" << endl;
         // Moved the variable declaration INSIDE the else block
         vector2D vel_init(U_star, 0.0); 
 
@@ -441,6 +459,9 @@ int main()
             // This initializes the populations f_i to equilibrium based on U_star
             mesh[i].equilibrium(mesh[i].rho, mesh[i].vel, Cs, rho_0); 
         }
+
+        //a very intersting problem actually comes up here! i have made an enite file talking about this problem
+        //..names Cold_start_problem, please do check it out for more information!
     }
 
     
@@ -557,12 +578,14 @@ int main()
 
 //---------cricle stuff complete------------------------------------
 
+//-----output files Declaration-------------------------------------
+
 
     ofstream outDrag("Drag_Circle.dat");
 
     ofstream outLift("Lift_circle.dat");
 
-    ofstream outRecir("Recirculation_circle.dat");
+    ofstream outStro("Strouhal_number.dat");
 
 //------------while loop starts HERE!!---------------------------------------
 
@@ -634,13 +657,46 @@ int main()
 
                     temporary[i].f[j] = mesh[i].f[j] + ((1.0 - B)*Omega_BGK) + (B* Omega_S);
                     
-                    
+
                     drag1= drag1 - (B* Omega_S * mesh[i].Xi[j].x );
                     lift1= lift1 - (B * Omega_S * mesh[i].Xi[j].y );
                    
                 }
 
             }    
+        }
+
+        if(perv_lift < 0)
+        {
+            if(lift1 >= 0)
+            {
+                q++;
+            }
+        }
+        
+        if(lift1 < 0)
+        {
+            if(q > 0)
+            {
+                neg_time++;
+            }
+        }
+        if(perv_lift < 0)
+        {
+            if(lift1 >= 0)
+            {
+                numb_of_waves++;
+
+                double Time_period = 2*((double)neg_time/(numb_of_waves-1)); //why the -1 here? 
+                //because we are always skipping the frist negative valued lift wave!
+                frequency = 1/Time_period;
+            }
+        }
+
+               
+        if(numb_of_waves > 2) //why 2? i just wanted to get 2 waves complete and then only start calculating strouhal number!
+        {
+            St = (frequency * d)/(U_star);
         }
     
 
@@ -966,6 +1022,8 @@ int main()
         //     error = sqrt(sum_square_diff / squared_sum);
         // } 
 
+        perv_lift = lift1; // used for the strouhal number calculation!
+    
         t++;
         steps++;
 
@@ -989,11 +1047,15 @@ int main()
 
         outLift << t << "\t" << ((lift1)/(0.5 * (U_star) * (U_star) * d)) << "\n";
 
+        outStro << t << "\t" << St << "\n";
+
 
         error = ((drag1)/(0.5 * ( U_star) * ( U_star) * d)) - C_d_last_time;
 
 
         C_d_last_time = ((drag1)/(0.5 * ( U_star) * ( U_star) * d));
+
+        
 
     }
 
@@ -1165,17 +1227,16 @@ int main()
 
     outDrag.close();
 
-    cout << "Drag saved to Drag_circle.csv!" << endl;
+    cout << "Drag saved to Drag_circle.dat!" << endl;
 
 
 
     outLift.close();
 
-    cout << "Lift saved to Lift_circle.csv!" << endl;
+    cout << "Lift saved to Lift_circle.dat!" << endl;
 
-    outRecir.close();
-
-    cout << "recirculation length saved to Recirculation_circle.csv" << endl;
+    outStro.close();
+    cout << "Strouhal number saved to Strouhal_number.dat" << endl;
 
 
     //***********************Lift and drag saved************************* */
