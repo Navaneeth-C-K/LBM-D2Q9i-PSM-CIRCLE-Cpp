@@ -291,7 +291,7 @@ int main()
     vector2D vel_zero(0, 0);
 
 
-    double total_time = 70.0;
+    double total_time = 600.0;
 
 
     double node_length = L_x / nodes_x;
